@@ -8,6 +8,8 @@
 defined('_JEXEC') or die( 'Restricted access' );
 require_once JPATH_SITE . '/components/com_content/models/articles.php';
 require_once JPATH_SITE . '/components/com_content/models/article.php';
+JLoader::register('FieldsHelper', JPATH_ADMINISTRATOR . '/components/com_fields/helpers/fields.php'); //load fields helper
+use Joomla\CMS\Categories\Categories;
 
 /**
  * Articles Resource
@@ -123,7 +125,8 @@ class ArticlesApiResourceArticle extends ApiResource
 
 		$num_articles = $art_obj->getTotal();
 		$data[] = new stdClass;
-
+		$extension = "content";
+		$categories = Categories::getInstance($extension);
 		foreach ($rows as $subKey => $subArray)
 		{
 			$data[$subKey]->id = $subArray->id;
@@ -137,6 +140,18 @@ class ArticlesApiResourceArticle extends ApiResource
 			$data[$subKey]->modified = $subArray->modified;
 			$data[$subKey]->publish_up = $subArray->publish_up;
 			$data[$subKey]->publish_down = $subArray->publish_down;
+			$customFieldnames = FieldsHelper::getFields('com_content.article', $subArray, true); // get custom field names by article 
+			$data[$subKey]->custom_fields  = $customFieldnames;
+			$categoryNodes = $categories->get($subArray->catid);
+			$category = json_decode(json_encode($categoryNodes), true); // convert the object to array
+			$params = json_decode($category['params']);
+			if ($params->image) {
+			$image = JURI::base().$params->image;
+			} else {
+				$image = '';
+			}
+			$category['image'] = $image;
+			$data[$subKey]->category = $category;
 
 			if ($subArray->images)
 			{
